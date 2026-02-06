@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum MidiaStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+model User {
+  id               String    @id @default(uuid())
+  nomeEmpresa      String
+  email            String    @unique
+  senha            String
+  role             String    @default("CLIENTE")
+  
+  statusConta      String    @default("PENDENTE")
+  
+  emailVerificado  Boolean   @default(false)
+  codigoVerifica   String?
+
+  validadePlano    DateTime?
+  testeGratisUsado Boolean   @default(false)
+  
+  instagramId         String?
+  instagramUser       String?
+  accessToken         String?   @db.Text
+  logoUrl             String?
+  
+  accessTokenMeta     String?   @db.Text
+  instagramBusinessId String?
+  
+  planoId          String?
+  plano            Plano?    @relation(fields: [planoId], references: [id])
+  
+  midias           Midia[]
+  createdAt        DateTime @default(now())
+}
+
+model Plano {
+  id           String   @id @default(uuid())
+  nome         String
+  preco        Float
+  tipoCobranca String
+  liberaVideo  Boolean  @default(false)
+  liberaLayout Boolean  @default(false)
+  usuarios     User[]
+  createdAt    DateTime @default(now())
+}
+
+model Cupom {
+  id        String   @id @default(uuid())
+  codigo    String   @unique
+  desconto  Float
+  tipo      String
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Midia {
+  id        String      @id @default(uuid())
+  url       String      @db.Text
+  tipo      String
+  duracao   Int         @default(10)
+
+  autor     String?
+  avatar    String?
+
+  dataPost  DateTime    @default(now())
+  expiresAt DateTime
+
+  status    MidiaStatus @default(APPROVED)
+
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+
+  createdAt DateTime    @default(now())
+}
+
+model PreUser {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  nomeEmpresa String
+  senha       String
+  codigo      String
+  createdAt   DateTime @default(now())
+}
