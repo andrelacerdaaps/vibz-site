@@ -21,7 +21,7 @@ async function main() {
       nome: 'Ouro (Foto + Vídeo)',
       preco: 197.00,
       tipoCobranca: 'MENSAL',
-      permiteVideo: true
+      liberaVideo: true
     }
   })
 
@@ -30,7 +30,7 @@ async function main() {
       nome: 'Barraca de Praia VIP',
       preco: 650.00,
       tipoCobranca: 'MENSAL',
-      permiteVideo: true
+      liberaVideo: true
     }
   })
 
@@ -42,7 +42,7 @@ async function main() {
       nome: 'Festa 15 Anos / Casamento (Diária)',
       preco: 500.00,
       tipoCobranca: 'DIARIA',
-      permiteVideo: true
+      liberaVideo: true
     }
   })
 
@@ -51,7 +51,7 @@ async function main() {
       nome: 'Eventos Políticos / Grandes (Diária)',
       preco: 1500.00,
       tipoCobranca: 'DIARIA',
-      permiteVideo: true
+      liberaVideo: true
     }
   })
 
@@ -60,7 +60,7 @@ async function main() {
       nome: 'Pacote Prefeitura (Diária)',
       preco: 2000.00,
       tipoCobranca: 'DIARIA',
-      permiteVideo: true
+      liberaVideo: true
     }
   })
 
