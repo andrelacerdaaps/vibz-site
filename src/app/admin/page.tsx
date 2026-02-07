@@ -23,17 +23,13 @@ export default function AdminDashboard() {
     } catch (e) { console.error("Erro ao carregar"); }
   }
 
-  // --- FUNÇÃO: SAIR (MANTIDA) ---
   const sair = () => {
     if(confirm("Tem certeza que deseja sair do Admin?")) {
-        localStorage.removeItem("usuarioVibz"); // Limpa a sessão
-        router.push("/login"); // Manda pro login
+        localStorage.removeItem("usuarioVibz");
+        router.push("/login");
     }
   }
 
-  // --- FUNÇÕES DE AÇÃO ---
-
-  // NOVO: Dar 7 Dias Grátis
   async function darSeteDias(userId: string) {
       if(!confirm("Liberar 7 dias grátis para este cliente?")) return;
       
@@ -46,7 +42,7 @@ export default function AdminDashboard() {
           alert("✅ Cliente liberado por 7 dias!");
           carregarDados();
       } else {
-          alert("Erro ao liberar (Verifique se atualizou o arquivo da API).");
+          alert("Erro ao liberar.");
       }
   }
 
@@ -71,7 +67,7 @@ export default function AdminDashboard() {
     if(res.ok) {
         carregarDados();
     } else {
-        alert("Erro ao excluir. O item pode estar em uso.");
+        alert("Erro ao excluir.");
     }
   }
 
@@ -98,7 +94,6 @@ export default function AdminDashboard() {
           <button onClick={() => setActiveTab("cupons")} className={`w-full text-left p-3 rounded-lg flex items-center gap-3 ${activeTab === 'cupons' ? 'bg-blue-600 shadow-lg shadow-blue-500/30' : 'hover:bg-gray-800 text-gray-400'}`}>🏷️ Cupons</button>
         </nav>
         
-        {/* BOTÃO DE SAIR */}
         <div className="p-4 border-t border-gray-800 flex flex-col gap-2">
             <button onClick={() => router.push('/')} className="text-gray-500 hover:text-white text-sm text-left p-2 rounded hover:bg-white/5">← Voltar ao Site</button>
             <button onClick={sair} className="text-red-500 hover:text-red-400 text-sm font-bold text-left p-2 rounded hover:bg-red-900/10">🚪 SAIR (Logout)</button>
@@ -108,12 +103,10 @@ export default function AdminDashboard() {
       {/* ÁREA PRINCIPAL */}
       <main className="flex-1 ml-64 p-10">
         
-        {/* --- DASHBOARD (Com Gráficos) --- */}
         {activeTab === "dashboard" && (
           <div className="space-y-8 animate-fade-in">
             <h2 className="text-3xl font-bold">Dashboard Financeiro</h2>
             
-            {/* Cards Topo */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-[#1a1a1a] p-6 rounded-2xl border border-gray-800 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-125 transition-transform"><span className="text-6xl text-green-500">$</span></div>
@@ -127,7 +120,6 @@ export default function AdminDashboard() {
                 <h3 className="text-3xl font-bold text-white mt-2">{data.stats.totalUsuarios}</h3>
               </div>
               
-              {/* Alerta de Pendentes (NOVO) */}
               {data.users.some((u: any) => u.statusConta === 'EM_ANALISE') ? (
                  <div className="bg-yellow-900/20 p-6 rounded-2xl border border-yellow-500 animate-pulse relative overflow-hidden">
                     <p className="text-yellow-400 text-sm font-bold">⚠️ APROVAÇÃO PENDENTE</p>
@@ -152,19 +144,16 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* GRÁFICO VISUAL (Bar Chart CSS) */}
             <div className="bg-[#1a1a1a] p-8 rounded-2xl border border-gray-800">
               <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                 📈 Crescimento de Vendas <span className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-300">Simulado</span>
+                  📈 Crescimento de Vendas <span className="text-xs bg-gray-700 px-2 py-1 rounded text-gray-300">Simulado</span>
               </h3>
               <div className="flex items-end justify-between h-64 gap-4 px-4 border-b border-gray-700 pb-2">
                 {[30, 45, 25, 60, 75, 40, 80, 95].map((h, i) => (
                   <div key={i} className="w-full relative group">
-                     {/* Tooltip */}
                      <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-white text-black text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
                         {h}%
                      </div>
-                     {/* Barra */}
                     <div className="w-full bg-blue-500/20 rounded-t-lg hover:bg-blue-500/40 transition-all cursor-pointer overflow-hidden" style={{ height: `${h}%` }}>
                       <div className="w-full h-full bg-gradient-to-t from-blue-600 via-purple-600 to-pink-500 opacity-80 rounded-t-lg group-hover:opacity-100"></div>
                     </div>
@@ -268,7 +257,7 @@ export default function AdminDashboard() {
             </div>
         )}
 
-        {/* --- CLIENTES (COM BOTÃO DE APROVAÇÃO) --- */}
+        {/* --- CLIENTES (COM VISUAL PLATINA/DIAMANTE) --- */}
         {activeTab === "clientes" && (
           <div className="bg-[#1a1a1a] rounded-xl overflow-hidden border border-gray-800 animate-fade-in shadow-2xl">
             <table className="w-full text-left">
@@ -277,28 +266,48 @@ export default function AdminDashboard() {
               </thead>
               <tbody className="divide-y divide-gray-800">
                 {data.users.map((user: any) => {
-                  // Calcula dias restantes
+                  // --- LÓGICA DE TIERS E DIAS ---
+                  const nomePlanoStr = user.planoAtivo?.toUpperCase() || "";
+                  const isDiamante = nomePlanoStr.includes("DIAMANTE") || nomePlanoStr.includes("GOLD");
+                  const isPlatina = nomePlanoStr.includes("PLATINA") || nomePlanoStr.includes("PRATA");
+
                   const validade = user.validadePlano ? new Date(user.validadePlano).toLocaleDateString('pt-BR') : null;
                   const dias = user.validadePlano ? Math.ceil((new Date(user.validadePlano).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0;
-                  
-                  // Detecta se está pedindo aprovação
                   const solicitandoTeste = user.statusConta === 'EM_ANALISE';
 
+                  // Estilo dinâmico da linha
+                  const rowClass = solicitandoTeste ? 'bg-yellow-900/20 animate-pulse' : 
+                                   isDiamante ? 'border-l-4 border-l-yellow-500 bg-yellow-500/5 hover:bg-yellow-500/10 transition-all' :
+                                   isPlatina ? 'border-l-4 border-l-blue-500 bg-blue-500/5 hover:bg-blue-500/10 transition-all' :
+                                   'hover:bg-white/5 transition-all';
+
                   return (
-                    <tr key={user.id} className={`transition-colors ${solicitandoTeste ? 'bg-yellow-900/10 hover:bg-yellow-900/20' : 'hover:bg-white/5'}`}>
+                    <tr key={user.id} className={rowClass}>
                       <td className="p-4">
                           <div className="font-bold text-white">{user.nomeEmpresa}</div>
                           <div className="text-xs text-gray-500">{user.email}</div>
                       </td>
                       <td className="p-4">
-                          {user.plano ? <span className="bg-blue-900/50 text-blue-200 px-2 py-1 rounded text-xs border border-blue-900">{user.plano.nome}</span> : <span className="text-gray-600 text-xs">-</span>}
+                          {/* CORREÇÃO: Mostra o planoAtivo com o estilo correto */}
+                          {user.planoAtivo ? (
+                              <span className={`px-2 py-1 rounded text-[10px] font-black border ${
+                                  isDiamante ? 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50' : 
+                                  isPlatina ? 'bg-blue-500/20 text-blue-400 border-blue-500/50' : 
+                                  'bg-gray-800 text-gray-400 border-gray-700'
+                              }`}>
+                                  {isDiamante && "💎 "}{isPlatina && "🥈 "}{user.planoAtivo}
+                              </span>
+                          ) : (
+                              <span className="text-gray-600 text-xs">-</span>
+                          )}
+
                           {validade && (
-                                <div className={`text-[10px] mt-1 ${dias > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                    {dias > 0 ? `Vence em ${dias} dias (${validade})` : `Venceu em ${validade}`}
+                                <div className={`text-[10px] mt-1 font-bold ${dias > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                  {dias > 0 ? `Vence em ${dias} dias (${validade})` : `Venceu em ${validade}`}
                                 </div>
                           )}
                       </td>
-                      <td className="p-4"><a href={`/tv?userId=${user.id}`} target="_blank" className="text-blue-400 hover:text-blue-300 underline text-xs">Abrir TV ↗</a></td>
+                      <td className="p-4"><a href={`/tv?userId=${user.id}`} target="_blank" className="text-blue-400 hover:text-blue-300 underline text-xs font-bold">Abrir TV ↗</a></td>
                       <td className="p-4">
                           {solicitandoTeste ? (
                               <span className="text-yellow-400 text-xs font-bold animate-pulse">⏳ PEDIU TESTE</span>
@@ -309,8 +318,6 @@ export default function AdminDashboard() {
                           )}
                       </td>
                       <td className="p-4 text-right flex justify-end gap-2">
-                         
-                         {/* BOTÃO DE AÇÃO DINÂMICO */}
                          {solicitandoTeste ? (
                              <button 
                                 onClick={() => darSeteDias(user.id)} 
@@ -342,7 +349,6 @@ export default function AdminDashboard() {
 
       </main>
       
-      {/* Estilos Globais de Animação */}
       <style jsx global>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out; }
