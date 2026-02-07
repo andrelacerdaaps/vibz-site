@@ -2,7 +2,14 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Adicione outras configurações se já existirem, mas o importante é o output standalone
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**", // Isso libera imagens de qualquer lugar (Instagram, Facebook, etc)
+      },
+    ],
+  },
 };
 
 export default nextConfig;
