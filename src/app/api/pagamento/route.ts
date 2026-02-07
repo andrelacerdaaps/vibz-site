@@ -1,63 +1,89 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+// Evita múltiplas instâncias do Prisma no Next.js (Hot Reload)
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const prisma = globalForPrisma.prisma || new PrismaClient();
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-// --- SUA CHAVE (MANTIDA) ---
 const ACCESS_TOKEN = 'APP_USR-6789075736569699-121918-7dd4a34e8606a4eff23bc481afa73949-1571274236';
 
+// --- 1. ROTA DE VERIFICAÇÃO (O Site chama isso a cada 3s) ---
+export async function GET(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) return NextResponse.json({ erro: "ID faltando" }, { status: 400 });
+
+        // Pergunta ao Mercado Pago o status real
+        const res = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
+            headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+        });
+        const data = await res.json();
+
+        // Se estiver APROVADO no banco, libera no sistema
+        if (data.status === 'approved') {
+            const userId = data.metadata?.user_id;
+            const planoId = data.metadata?.plano_id;
+
+            if (userId) {
+                const dataValidade = new Date();
+                dataValidade.setDate(dataValidade.getDate() + 30); 
+
+                await prisma.user.update({
+                    where: { id: userId },
+                    data: { 
+                        statusConta: 'ATIVO', 
+                        plano: planoId || 'VIBZ PRO',
+                        validadePlano: dataValidade 
+                    }
+                });
+            }
+        }
+
+        return NextResponse.json({ status: data.status });
+    } catch (error) {
+        return NextResponse.json({ erro: "Erro API" }, { status: 500 });
+    }
+}
+
+// --- 2. ROTA DE CRIAÇÃO (POST) ---
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { userId, planoId, preco, email, acao } = body;
 
-    // --- 1. SOLICITAR TESTE GRÁTIS (NOVO!) ---
+    // Ação: Teste Grátis
     if (acao === 'SOLICITAR_TESTE') {
-        // Verifica se já usou o teste antes para evitar abuso
         const userCheck = await prisma.user.findUnique({ where: { id: userId } });
-        
         if (userCheck?.testeGratisUsado) {
              return NextResponse.json({ erro: "Você já usou seu teste grátis." }, { status: 400 });
         }
-
-        // Marca o status como "EM_ANALISE" para aparecer no Admin
         await prisma.user.update({
             where: { id: userId },
             data: { statusConta: 'EM_ANALISE' }
         });
-
         return NextResponse.json({ sucesso: true });
     }
 
-    // --- 2. CONFIRMAÇÃO MANUAL DE PAGAMENTO (WEBHOOK/ADMIN) ---
-    if (acao === 'CONFIRMAR_PAGAMENTO') {
-        const dataValidade = new Date();
-        dataValidade.setDate(dataValidade.getDate() + 31);
-        await prisma.user.update({
-            where: { id: userId },
-            data: { statusConta: 'ATIVO', planoId: planoId, validadePlano: dataValidade }
-        });
-        return NextResponse.json({ sucesso: true });
-    }
-
-    // --- 3. GERAÇÃO DO PIX (MERCADO PAGO) ---
-    
-    // Tratamento do Preço
+    // Ação: Gerar Pix
     const valorFloat = parseFloat(String(preco));
-
-    console.log(`💰 Gerando PIX de R$ ${valorFloat}...`);
-
     const dadosPagamento = {
       transaction_amount: valorFloat,
       description: `VIBZ - Plano ${planoId}`,
       payment_method_id: 'pix',
       payer: {
-        // Truque de segurança: Se for email do admin, usa um email fake
-        email: email === 'admin@vibz.com' ? 'cliente_teste_vendas@test.com' : email,
+        email: email === 'admin@vibz.com' ? 'test_user_123@test.com' : email,
         first_name: 'Cliente',
         last_name: 'VIBZ'
       },
-      notification_url: "https://vibz.com.br/api/webhook"
+      // IMPORTANTÍSSIMO: Metadados para identificar o usuário na volta
+      metadata: {
+          user_id: userId,
+          plano_id: planoId
+      },
+      notification_url: "https://vibzplayer.com.br/api/webhook"
     };
 
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -72,24 +98,17 @@ export async function POST(request: Request) {
 
     const dataMP = await response.json();
 
-    // SE DER ERRO
     if (!response.ok) {
-      console.error("❌ ERRO MERCADO PAGO:", JSON.stringify(dataMP, null, 2));
-      return NextResponse.json({ 
-        erro: dataMP.message || "Erro de autorização no Mercado Pago" 
-      }, { status: 400 });
+      return NextResponse.json({ erro: "Erro Mercado Pago" }, { status: 400 });
     }
-
-    console.log("✅ SUCESSO! PIX GERADO.");
 
     return NextResponse.json({
       qr_code: dataMP.point_of_interaction?.transaction_data?.qr_code,
       qr_code_base64: dataMP.point_of_interaction?.transaction_data?.qr_code_base64,
-      id_transacao: dataMP.id
+      id_transacao: dataMP.id 
     });
 
   } catch (error) {
-    console.error("ERRO SERVIDOR:", error);
-    return NextResponse.json({ erro: "Erro interno no servidor" }, { status: 500 });
+    return NextResponse.json({ erro: "Erro interno" }, { status: 500 });
   }
 }
