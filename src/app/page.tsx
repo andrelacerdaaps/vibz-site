@@ -278,7 +278,7 @@ export default function Home() {
                       <p className={`text-3xl font-bold ${isAtivo ? 'text-green-400' : 'text-red-400'}`}>{isAtivo ? "Ativo" : "Inativo"}</p>
                   </div>
                   <p className="text-white mt-4 font-bold">
-                    {typeof usuario.plano === 'string' ? usuario.plano : (usuario.plano?.nome || "Padrão")}
+                    {usuario.planoAtivo || (usuario.plano?.nome || "Padrão")}
                   </p>
                   <p className="text-xs text-gray-400">{diasRestantes} dias restantes</p>
                 </div>

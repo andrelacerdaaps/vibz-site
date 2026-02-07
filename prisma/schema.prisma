@@ -1,6 +1,5 @@
 generator client {
   provider      = "prisma-client-js"
-  // Mantendo a configuração para o servidor da Hostinger
   binaryTargets = ["native", "debian-openssl-1.1.x", "rhel-openssl-1.0.x"]
 }
 
@@ -38,12 +37,13 @@ model User {
   accessTokenMeta     String?   @db.Text
   instagramBusinessId String?
   
+  // --- CAMPO CORRIGIDO AQUI ---
+  planoAtivo        String?   @default("Gratuito")
+  
   planoId           String?
   plano             Plano?    @relation(fields: [planoId], references: [id])
   
   midias            Midia[]
-  
-  // --- CORREÇÃO: Ligação com a nova tabela de Pagamentos ---
   pagamentos        Pagamento[]
   
   createdAt         DateTime  @default(now())
@@ -79,7 +79,7 @@ model Midia {
   avatar    String?
 
   dataPost  DateTime    @default(now())
-  expiresAt DateTime    // Campo essencial para sua estratégia de 15h
+  expiresAt DateTime
 
   status    MidiaStatus @default(APPROVED)
 
@@ -98,12 +98,11 @@ model PreUser {
   createdAt   DateTime @default(now())
 }
 
-// --- NOVO MODELO: Para registrar transações do Mercado Pago ---
 model Pagamento {
   id               String   @id @default(uuid())
-  idTransacaoMP    String   @unique // ID oficial do Mercado Pago
+  idTransacaoMP    String   @unique 
   valor            Float
-  status           String   @default("pending") // pending, approved, rejected
+  status           String   @default("pending") 
   metodo           String   @default("pix")
   
   userId           String
