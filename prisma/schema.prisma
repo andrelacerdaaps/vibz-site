@@ -1,5 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
+  // Mantendo a configuração para o servidor da Hostinger
   binaryTargets = ["native", "debian-openssl-1.1.x", "rhel-openssl-1.0.x"]
 }
 
@@ -41,6 +42,10 @@ model User {
   plano             Plano?    @relation(fields: [planoId], references: [id])
   
   midias            Midia[]
+  
+  // --- CORREÇÃO: Ligação com a nova tabela de Pagamentos ---
+  pagamentos        Pagamento[]
+  
   createdAt         DateTime  @default(now())
 }
 
@@ -74,7 +79,7 @@ model Midia {
   avatar    String?
 
   dataPost  DateTime    @default(now())
-  expiresAt DateTime    // Campo essencial para o seu plano de 15h
+  expiresAt DateTime    // Campo essencial para sua estratégia de 15h
 
   status    MidiaStatus @default(APPROVED)
 
@@ -91,4 +96,20 @@ model PreUser {
   senha       String
   codigo      String
   createdAt   DateTime @default(now())
+}
+
+// --- NOVO MODELO: Para registrar transações do Mercado Pago ---
+model Pagamento {
+  id               String   @id @default(uuid())
+  idTransacaoMP    String   @unique // ID oficial do Mercado Pago
+  valor            Float
+  status           String   @default("pending") // pending, approved, rejected
+  metodo           String   @default("pix")
+  
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  
+  planoId          String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

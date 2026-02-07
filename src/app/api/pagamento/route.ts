@@ -13,7 +13,7 @@ const ACCESS_TOKEN = 'APP_USR-8096434725609568-020320-426ea7fff1c567ab7d8c35336d
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id');
+        const id = searchParams.get('id'); // Este é o ID da transação do Mercado Pago
 
         if (!id) return NextResponse.json({ erro: "ID faltando" }, { status: 400 });
 
@@ -23,10 +23,17 @@ export async function GET(request: Request) {
         });
         const data = await res.json();
 
-        // Se estiver APROVADO no banco, libera no sistema
+        // Se estiver APROVADO no Mercado Pago, libera no sistema
         if (data.status === 'approved') {
             const userId = data.metadata?.user_id;
             const planoId = data.metadata?.plano_id;
+
+            // --- NOVO: ATUALIZA O STATUS NA TABELA PAGAMENTO ---
+            // Isso garante que você tenha o histórico aprovado no banco
+            await prisma.pagamento.updateMany({
+                where: { idTransacaoMP: String(id) },
+                data: { status: 'approved' }
+            });
 
             if (userId) {
                 const dataValidade = new Date();
@@ -36,7 +43,7 @@ export async function GET(request: Request) {
                     where: { id: userId },
                     data: { 
                         statusConta: 'ATIVO', 
-                        plano: planoId || 'VIBZ PRO',
+                        planoAtivo: planoId || 'VIBZ PRO', // Usando o campo de texto que criamos
                         validadePlano: dataValidade 
                     }
                 });
@@ -79,7 +86,6 @@ export async function POST(request: Request) {
         first_name: 'Cliente',
         last_name: 'VIBZ'
       },
-      // IMPORTANTÍSSIMO: Metadados para identificar o usuário na volta
       metadata: {
           user_id: userId,
           plano_id: planoId
@@ -102,6 +108,18 @@ export async function POST(request: Request) {
     if (!response.ok) {
       return NextResponse.json({ erro: "Erro Mercado Pago" }, { status: 400 });
     }
+
+    // --- NOVO: SALVA A TENTATIVA NA TABELA PAGAMENTO ---
+    // Cria o registro como 'pending' assim que o QR Code aparece
+    await prisma.pagamento.create({
+      data: {
+        idTransacaoMP: String(dataMP.id),
+        valor: valorFloat,
+        userId: userId,
+        planoId: planoId,
+        status: 'pending'
+      }
+    });
 
     return NextResponse.json({
       qr_code: dataMP.point_of_interaction?.transaction_data?.qr_code,
