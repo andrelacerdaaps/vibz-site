@@ -5,14 +5,14 @@ export const dynamic = 'force-dynamic'; // Garante que a lista de preços esteja
 
 export async function GET() {
   try {
-    // Vai no banco de dados e busca os planos ativos
+    // Busca todos os planos ordenados por preço (removido o filtro 'ativo' que não existe no banco)
     const planos = await prisma.plano.findMany({
-      where: { ativo: true },
       orderBy: { preco: 'asc' }
     });
 
     return NextResponse.json({ planos });
   } catch (error) {
+    console.error("Erro ao buscar planos:", error);
     return NextResponse.json(
       { error: "Erro ao buscar planos" },
       { status: 500 }
