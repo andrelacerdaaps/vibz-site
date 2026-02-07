@@ -40,14 +40,14 @@ function PlaylistManager({ userId }: { userId: string }) {
       {midias.map((midia) => (
         <div key={midia.id} className="relative group aspect-[9/16] bg-gray-800 rounded-xl overflow-hidden border border-white/10 hover:border-red-500 transition-colors shadow-lg">
           {midia.tipo === 'VIDEO' ? (
-             <video src={midia.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" muted />
+              <video src={midia.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" muted />
           ) : (
-             <img src={midia.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+              <img src={midia.url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
           )}
           
           <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
-             <img src={midia.avatar || "https://i.pravatar.cc/150"} className="w-4 h-4 rounded-full" />
-             <span className="text-[10px] text-white truncate max-w-[60px]">{midia.autor}</span>
+              <img src={midia.avatar || "https://i.pravatar.cc/150"} className="w-4 h-4 rounded-full" />
+              <span className="text-[10px] text-white truncate max-w-[60px]">{midia.autor}</span>
           </div>
           <button onClick={() => apagarMidia(midia.id)} className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/90 opacity-0 group-hover:opacity-100 transition-all cursor-pointer backdrop-blur-sm">
             <span className="text-3xl mb-2">🗑️</span>
@@ -74,20 +74,17 @@ export default function Home() {
 
   // 1. CARREGAMENTO BLINDADO (Com Timeout de Segurança)
   useEffect(() => {
-    // Se passar 1 segundo e não tiver carregado, força o fim do loading
     const safetyTimer = setTimeout(() => {
         setLoading(false);
     }, 1000);
 
     const carregarTudo = async () => {
-        // Checa retorno do Facebook
         const params = new URLSearchParams(window.location.search);
         if (params.get("conexao") === "sucesso") {
             setSucessoConexao(true);
             window.history.replaceState(null, "", "/");
         }
 
-        // Carrega Usuário
         const dadosSalvos = localStorage.getItem("usuarioVibz");
         if (dadosSalvos) {
             try {
@@ -95,11 +92,9 @@ export default function Home() {
                 setUsuario(user);
                 setInstaInput(user.instagramUser || "");
                 
-                // Inicia Robô Sync
                 sincronizarAutomatico(user.id);
                 const timerSync = setInterval(() => sincronizarAutomatico(user.id), 120000);
                 
-                // Limpa timer de segurança pois carregou com sucesso
                 clearTimeout(safetyTimer);
                 setLoading(false);
                 
@@ -129,7 +124,7 @@ export default function Home() {
   const sair = () => {
     localStorage.removeItem("usuarioVibz");
     setUsuario(null);
-    window.location.href = "/login"; // Força recarregamento limpo
+    window.location.href = "/login";
   };
 
   const conectarInstagramMeta = () => {
@@ -173,7 +168,6 @@ export default function Home() {
     finally { setSincronizando(false); }
   };
 
-  // TELA DE CARREGAMENTO COM BOTÃO DE EMERGÊNCIA
   if (loading) return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white gap-4">
         <div className="animate-pulse text-2xl font-black">CARREGANDO VIBZ...</div>
@@ -186,7 +180,6 @@ export default function Home() {
     </div>
   );
 
-  // PAINEL LOGADO
   if (usuario) {
     const dataValidade = usuario.validadePlano ? new Date(usuario.validadePlano) : new Date();
     const diasRestantes = Math.ceil((dataValidade.getTime() - new Date().getTime()) / (86400000));
@@ -277,6 +270,7 @@ export default function Home() {
                 </button>
             </div>
 
+            {/* --- CARD DE STATUS CORRIGIDO --- */}
             <div className={`p-8 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${isAtivo ? 'bg-green-900/10 border-green-500/30' : 'bg-red-900/10 border-red-500/30'}`}>
                 <div>
                   <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest">Status</h3>
@@ -284,8 +278,21 @@ export default function Home() {
                       <span className={`w-3 h-3 rounded-full ${isAtivo ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
                       <p className={`text-3xl font-bold ${isAtivo ? 'text-green-400' : 'text-red-400'}`}>{isAtivo ? "Ativo" : "Inativo"}</p>
                   </div>
-                  <p className="text-white mt-4 font-bold">{usuario.plano?.nome || "Padrão"}</p>
+                  {/* AJUSTE: Exibe o nome do plano corretamente */}
+                  <p className="text-white mt-4 font-bold">
+                    {typeof usuario.plano === 'string' ? usuario.plano : (usuario.plano?.nome || "Padrão")}
+                  </p>
                   <p className="text-xs text-gray-400">{diasRestantes} dias restantes</p>
+                </div>
+
+                {/* ADIÇÃO: Botão de Upgrade */}
+                <div className="mt-6">
+                  <button 
+                    onClick={() => router.push('/planos')}
+                    className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-purple-900/20"
+                  >
+                    ✨ FAZER UPGRADE
+                  </button>
                 </div>
             </div>
           </div>
@@ -301,7 +308,6 @@ export default function Home() {
     );
   }
 
-  // TELA LANDING PAGE
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col items-center justify-center text-center p-4">
       <h1 className="text-7xl font-black bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-8 tracking-tighter">VIBZ.</h1>
