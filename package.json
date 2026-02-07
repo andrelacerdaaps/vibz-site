@@ -2,10 +2,11 @@
   "name": "vibz",
   "version": "0.1.0",
   "private": true,
+  "main": "server.js",
   "scripts": {
     "dev": "next dev",
     "build": "npx prisma generate && next build",
-    "start": "npx prisma generate && node server.js",
+    "start": "node server.js",
     "lint": "eslint"
   },
   "dependencies": {
