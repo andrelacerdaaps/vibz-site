@@ -185,6 +185,19 @@ export default function Home() {
     const diasRestantes = Math.ceil((dataValidade.getTime() - new Date().getTime()) / (86400000));
     const isAtivo = usuario.statusConta === "ATIVO" && diasRestantes >= 0;
 
+    // --- LÓGICA DE CORES PLATINA / DIAMANTE ---
+    const nomePlano = usuario.planoAtivo?.toUpperCase() || "PADRÃO";
+    const isDiamante = nomePlano.includes("DIAMANTE") || nomePlano.includes("GOLD");
+    const isPlatina = nomePlano.includes("PLATINA") || nomePlano.includes("PRATA");
+
+    const corBorda = isDiamante ? "border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]" : 
+                     isPlatina ? "border-blue-400 shadow-[0_0_15px_rgba(96,165,250,0.3)]" : 
+                     isAtivo ? "border-green-500/30" : "border-red-500/30";
+
+    const bgCard = isDiamante ? "bg-gradient-to-br from-yellow-900/20 to-black" :
+                   isPlatina ? "bg-gradient-to-br from-blue-900/20 to-black" :
+                   isAtivo ? "bg-green-900/10" : "bg-red-900/10";
+
     const instagramUrl = `https://instagram.com/${usuario.instagramUser || "instagram"}`;
     const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(instagramUrl)}&color=000000&bgcolor=ffffff`;
 
@@ -270,25 +283,35 @@ export default function Home() {
                 </button>
             </div>
 
-            <div className={`p-8 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${isAtivo ? 'bg-green-900/10 border-green-500/30' : 'bg-red-900/10 border-red-500/30'}`}>
+            {/* --- CARD DE STATUS DINÂMICO --- */}
+            <div className={`p-8 rounded-3xl border backdrop-blur-xl flex flex-col justify-between transition-all duration-700 ${bgCard} ${corBorda}`}>
                 <div>
-                  <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest">Status</h3>
+                  <h3 className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">Plano Atual</h3>
                   <div className="flex items-center gap-3 mt-2">
                       <span className={`w-3 h-3 rounded-full ${isAtivo ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
-                      <p className={`text-3xl font-bold ${isAtivo ? 'text-green-400' : 'text-red-400'}`}>{isAtivo ? "Ativo" : "Inativo"}</p>
+                      <p className={`text-3xl font-black tracking-tighter ${isAtivo ? 'text-white' : 'text-red-400'}`}>
+                        {usuario.planoAtivo || "PADRÃO"}
+                      </p>
                   </div>
-                  <p className="text-white mt-4 font-bold">
-                    {usuario.planoAtivo || (usuario.plano?.nome || "Padrão")}
-                  </p>
-                  <p className="text-xs text-gray-400">{diasRestantes} dias restantes</p>
+                  
+                  {/* Cronômetro de Dias */}
+                  <div className="mt-6 space-y-2">
+                    <div className="flex justify-between items-end">
+                      <p className="text-xs text-gray-500 uppercase font-bold">Vencimento</p>
+                      <p className="text-lg font-black text-blue-400">{diasRestantes} <span className="text-[10px] text-gray-400">DIAS</span></p>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                       <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${(diasRestantes/30)*100}%` }}></div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-6">
                   <button 
                     onClick={() => router.push('/planos')}
-                    className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-purple-900/20"
+                    className="w-full py-3 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all"
                   >
-                    ✨ FAZER UPGRADE
+                    ✨ UPGRADE DE PLANO
                   </button>
                 </div>
             </div>
