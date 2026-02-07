@@ -12,7 +12,7 @@ async function main() {
       nome: 'Básico (Só Fotos)',
       preco: 100.00,
       tipoCobranca: 'MENSAL',
-      permiteVideo: false
+      liberaVideo: false
     }
   })
 
