@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-export const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Aqui eu ajustei para usar a conexão segura que criamos no src/lib/prisma.ts
+// Isso evita erros no servidor, mas mantém o funcionamento idêntico.
+import { prisma } from "@/lib/prisma"; 
 
 export async function POST(request: Request) {
   try {
@@ -38,7 +36,9 @@ export async function POST(request: Request) {
         avatar: usuario.logoUrl || `https://unavatar.io/instagram/${handle}`, // Usa a foto do perfil
         duracao: 10,
         userId: userId,
-        status: 'APPROVED'
+        status: 'APPROVED',
+        // A LINHA ABAIXO FOI A ÚNICA LÓGICA NOVA ADICIONADA (Obrigatória pelo Banco de Dados)
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) 
       }
     });
 
