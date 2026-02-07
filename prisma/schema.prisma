@@ -1,5 +1,7 @@
 generator client {
   provider = "prisma-client-js"
+  // AQUI ESTÁ A CORREÇÃO: Forçamos o Prisma a aceitar o Linux da Hostinger
+  binaryTargets = ["native", "debian-openssl-1.1.x", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
@@ -14,18 +16,18 @@ enum MidiaStatus {
 }
 
 model User {
-  id               String    @id @default(uuid())
-  nomeEmpresa      String
-  email            String    @unique
-  senha            String
-  role             String    @default("CLIENTE")
+  id             String    @id @default(uuid())
+  nomeEmpresa    String
+  email          String    @unique
+  senha          String
+  role           String    @default("CLIENTE")
   
-  statusConta      String    @default("PENDENTE")
+  statusConta    String    @default("PENDENTE")
   
-  emailVerificado  Boolean   @default(false)
-  codigoVerifica   String?
+  emailVerificado Boolean   @default(false)
+  codigoVerifica  String?
 
-  validadePlano    DateTime?
+  validadePlano   DateTime?
   testeGratisUsado Boolean   @default(false)
   
   instagramId         String?
@@ -36,11 +38,11 @@ model User {
   accessTokenMeta     String?   @db.Text
   instagramBusinessId String?
   
-  planoId          String?
-  plano            Plano?    @relation(fields: [planoId], references: [id])
+  planoId           String?
+  plano             Plano?     @relation(fields: [planoId], references: [id])
   
-  midias           Midia[]
-  createdAt        DateTime @default(now())
+  midias            Midia[]
+  createdAt         DateTime @default(now())
 }
 
 model Plano {
