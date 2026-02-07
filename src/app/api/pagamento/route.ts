@@ -1,26 +1,81 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+// Evita criar múltiplas instâncias do Prisma em desenvolvimento
+const globalForPrisma = global as unknown as { prisma: PrismaClient };
+const prisma = globalForPrisma.prisma || new PrismaClient();
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-// --- SUA CHAVE (MANTIDA) ---
+// --- SUA CHAVE DE ACESSO ---
 const ACCESS_TOKEN = 'APP_USR-6789075736569699-121918-7dd4a34e8606a4eff23bc481afa73949-1571274236';
 
+// --- 1. VERIFICAR STATUS DO PAGAMENTO (GET) ---
+// O site chama essa rota a cada 3 segundos para saber se pagou
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ erro: "ID do pagamento obrigatório" }, { status: 400 });
+    }
+
+    // Consulta o Mercado Pago
+    const res = await fetch(`https://api.mercadopago.com/v1/payments/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${ACCESS_TOKEN}`
+      }
+    });
+
+    const data = await res.json();
+
+    // Se o pagamento foi aprovado, ativamos o usuário no banco
+    if (data.status === 'approved') {
+        // Recupera quem é o usuário pelos metadados que enviamos na criação
+        const userId = data.metadata?.user_id;
+        const planoId = data.metadata?.plano_id;
+
+        if (userId) {
+            const dataValidade = new Date();
+            dataValidade.setDate(dataValidade.getDate() + 30); // 30 dias de acesso
+
+            await prisma.user.update({
+                where: { id: userId },
+                data: { 
+                    statusConta: 'ATIVO', 
+                    plano: planoId || 'VIBZ PRO', // Nome do plano para referência
+                    validadePlano: dataValidade 
+                }
+            });
+            console.log(`✅ Usuário ${userId} ativado automaticamente via API!`);
+        }
+    }
+
+    return NextResponse.json({ 
+        status: data.status,
+        id: data.id
+    });
+
+  } catch (error) {
+    console.error("Erro ao verificar status:", error);
+    return NextResponse.json({ erro: "Erro ao consultar Mercado Pago" }, { status: 500 });
+  }
+}
+
+// --- 2. GERAR PIX (POST) ---
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { userId, planoId, preco, email, acao } = body;
 
-    // --- 1. SOLICITAR TESTE GRÁTIS (NOVO!) ---
+    // --- AÇÃO: SOLICITAR TESTE GRÁTIS ---
     if (acao === 'SOLICITAR_TESTE') {
-        // Verifica se já usou o teste antes para evitar abuso
         const userCheck = await prisma.user.findUnique({ where: { id: userId } });
         
         if (userCheck?.testeGratisUsado) {
              return NextResponse.json({ erro: "Você já usou seu teste grátis." }, { status: 400 });
         }
 
-        // Marca o status como "EM_ANALISE" para aparecer no Admin
         await prisma.user.update({
             where: { id: userId },
             data: { statusConta: 'EM_ANALISE' }
@@ -29,35 +84,28 @@ export async function POST(request: Request) {
         return NextResponse.json({ sucesso: true });
     }
 
-    // --- 2. CONFIRMAÇÃO MANUAL DE PAGAMENTO (WEBHOOK/ADMIN) ---
-    if (acao === 'CONFIRMAR_PAGAMENTO') {
-        const dataValidade = new Date();
-        dataValidade.setDate(dataValidade.getDate() + 31);
-        await prisma.user.update({
-            where: { id: userId },
-            data: { statusConta: 'ATIVO', planoId: planoId, validadePlano: dataValidade }
-        });
-        return NextResponse.json({ sucesso: true });
-    }
-
-    // --- 3. GERAÇÃO DO PIX (MERCADO PAGO) ---
+    // --- AÇÃO: GERAR O PIX ---
     
-    // Tratamento do Preço
+    // Converte preço para número (garantia)
     const valorFloat = parseFloat(String(preco));
 
-    console.log(`💰 Gerando PIX de R$ ${valorFloat}...`);
+    console.log(`💰 Gerando PIX de R$ ${valorFloat} para User ${userId}...`);
 
     const dadosPagamento = {
       transaction_amount: valorFloat,
       description: `VIBZ - Plano ${planoId}`,
       payment_method_id: 'pix',
       payer: {
-        // Truque de segurança: Se for email do admin, usa um email fake
-        email: email === 'admin@vibz.com' ? 'cliente_teste_vendas@test.com' : email,
+        email: email === 'admin@vibz.com' ? 'test_user_123@test.com' : email,
         first_name: 'Cliente',
         last_name: 'VIBZ'
       },
-      notification_url: "https://vibz.com.br/api/webhook"
+      // IMPORTANTÍSSIMO: Metadados para identificar o usuário depois
+      metadata: {
+          user_id: userId,
+          plano_id: planoId
+      },
+      notification_url: "https://vibzplayer.com.br/api/webhook"
     };
 
     const response = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -72,7 +120,6 @@ export async function POST(request: Request) {
 
     const dataMP = await response.json();
 
-    // SE DER ERRO
     if (!response.ok) {
       console.error("❌ ERRO MERCADO PAGO:", JSON.stringify(dataMP, null, 2));
       return NextResponse.json({ 
@@ -80,12 +127,12 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    console.log("✅ SUCESSO! PIX GERADO.");
+    console.log("✅ PIX GERADO COM SUCESSO. ID:", dataMP.id);
 
     return NextResponse.json({
       qr_code: dataMP.point_of_interaction?.transaction_data?.qr_code,
       qr_code_base64: dataMP.point_of_interaction?.transaction_data?.qr_code_base64,
-      id_transacao: dataMP.id
+      payment_id: dataMP.id // Enviamos o ID para o frontend monitorar
     });
 
   } catch (error) {

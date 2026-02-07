@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Planos() {
@@ -10,6 +10,8 @@ export default function Planos() {
   const [pixData, setPixData] = useState<any>(null);
   const [planoSelecionado, setPlanoSelecionado] = useState<any>(null);
   const [copiado, setCopiado] = useState(false);
+  const [statusPagamento, setStatusPagamento] = useState("AGUARDANDO"); // AGUARDANDO | APROVADO
+  const intervaloRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const dadosUser = localStorage.getItem("usuarioVibz");
@@ -25,7 +27,50 @@ export default function Planos() {
       }
     }
     carregarPlanos();
+
+    // Limpa intervalo ao sair da tela
+    return () => pararVerificacao();
   }, []);
+
+  // Função para parar o loop de verificação
+  const pararVerificacao = () => {
+    if (intervaloRef.current) {
+      clearInterval(intervaloRef.current);
+      intervaloRef.current = null;
+    }
+  };
+
+  // Função que verifica o status a cada 3 segundos
+  const iniciarVerificacao = (paymentId: string) => {
+    pararVerificacao(); // Garante que não tem dois loops rodando
+    
+    intervaloRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/pagamento?id=${paymentId}`);
+        const dados = await res.json();
+
+        if (dados.status === "approved") {
+          setStatusPagamento("APROVADO");
+          pararVerificacao();
+          
+          // Atualiza o usuario no LocalStorage
+          const novoUsuario = {
+             ...usuario,
+             plano: planoSelecionado?.nome || "VIBZ PRO", // Fallback seguro
+             statusConta: "ATIVO",
+          };
+          localStorage.setItem("usuarioVibz", JSON.stringify(novoUsuario));
+          
+          setTimeout(() => {
+             alert("✅ Pagamento Confirmado! Bem-vindo ao VIBZ.");
+             router.push("/");
+          }, 1000);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar status:", error);
+      }
+    }, 3000); // Roda a cada 3 segundos
+  };
 
   const gerarPix = async (plano: any) => {
     if (!usuario) {
@@ -36,6 +81,7 @@ export default function Planos() {
 
     setLoadingId(plano.id);
     setPlanoSelecionado(plano);
+    setStatusPagamento("AGUARDANDO");
 
     try {
       const res = await fetch("/api/pagamento", {
@@ -51,46 +97,16 @@ export default function Planos() {
 
       const dados = await res.json();
 
-      if (res.ok && dados.qr_code) {
+      if (res.ok && dados.qr_code && dados.payment_id) {
         setPixData(dados);
         setCopiado(false);
+        // Inicia a verificação automática usando o ID do pagamento
+        iniciarVerificacao(dados.payment_id);
       } else {
-        alert(`Erro: ${dados.erro || "Falha ao comunicar com Mercado Pago"}`);
+        alert(`Erro: ${dados.erro || "Falha ao gerar PIX"}`);
       }
     } catch (error) {
       alert("Erro de conexão.");
-    } finally {
-      setLoadingId(null);
-    }
-  };
-
-  const confirmarPagamento = async () => {
-    setLoadingId("CONFIRMANDO");
-    try {
-      const res = await fetch("/api/pagamento", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          acao: "CONFIRMAR_PAGAMENTO",
-          userId: usuario.id,
-          planoId: planoSelecionado.id,
-        }),
-      });
-
-      if (res.ok) {
-        const novoUsuario = {
-          ...usuario,
-          plano: planoSelecionado.nome,
-          statusConta: "ATIVO",
-        };
-        localStorage.setItem("usuarioVibz", JSON.stringify(novoUsuario));
-        alert("✅ Pagamento Recebido! Bem-vindo ao VIBZ.");
-        router.push("/");
-      } else {
-        alert("Pagamento ainda não identificado. Aguarde um momento.");
-      }
-    } catch (e) {
-      alert("Erro ao validar pagamento.");
     } finally {
       setLoadingId(null);
     }
@@ -102,6 +118,11 @@ export default function Planos() {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 3000);
     }
+  };
+
+  const fecharModal = () => {
+      pararVerificacao();
+      setPixData(null);
   };
 
   return (
@@ -116,7 +137,7 @@ export default function Planos() {
                 Total: <span className="text-green-400 font-bold text-sm">R$ {planoSelecionado?.preco}</span>
               </p>
               <button
-                onClick={() => setPixData(null)}
+                onClick={fecharModal}
                 className="absolute top-4 right-4 text-gray-600 hover:text-white transition-colors"
               >
                 ✕
@@ -124,40 +145,42 @@ export default function Planos() {
             </div>
 
             <div className="p-6 w-full flex flex-col items-center">
-              <div
-                className="bg-white p-2 rounded-xl mb-6 flex justify-center items-center"
-                style={{ width: "180px", height: "180px" }}
-              >
-                <img
-                  src={`data:image/png;base64,${pixData.qr_code_base64}`}
-                  className="w-full h-full object-contain mix-blend-multiply"
-                  alt="QR Code"
-                />
-              </div>
+              {statusPagamento === "APROVADO" ? (
+                 <div className="flex flex-col items-center justify-center py-10 animate-pulse">
+                    <div className="text-6xl mb-4">🎉</div>
+                    <h3 className="text-green-500 font-bold text-xl">PAGAMENTO APROVADO!</h3>
+                    <p className="text-gray-400 text-sm mt-2">Redirecionando...</p>
+                 </div>
+              ) : (
+                <>
+                  <div className="bg-white p-2 rounded-xl mb-6 flex justify-center items-center" style={{ width: "180px", height: "180px" }}>
+                    <img
+                      src={`data:image/png;base64,${pixData.qr_code_base64}`}
+                      className="w-full h-full object-contain mix-blend-multiply"
+                      alt="QR Code"
+                    />
+                  </div>
 
-              <div className="w-full space-y-3">
-                <button
-                  onClick={copiarCodigo}
-                  className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 text-sm ${
-                    copiado ? "bg-green-600 text-white" : "bg-blue-600 hover:bg-blue-500 text-white"
-                  }`}
-                >
-                  {copiado ? "✓ CÓDIGO COPIADO!" : "📋 COPIAR CÓDIGO PIX"}
-                </button>
-                <p className="text-[10px] text-gray-500 text-center">
-                  Cole o código no app do seu banco.
-                </p>
-              </div>
-            </div>
-
-            <div className="w-full p-4 bg-[#111] border-t border-gray-800">
-              <button
-                onClick={confirmarPagamento}
-                disabled={loadingId === "CONFIRMANDO"}
-                className="w-full py-3 rounded-xl border border-green-500/30 text-green-400 font-bold hover:bg-green-500/10 transition-colors text-sm"
-              >
-                {loadingId === "CONFIRMANDO" ? "Validando..." : "🚀 JÁ FIZ O PAGAMENTO"}
-              </button>
+                  <div className="w-full space-y-3">
+                    <button
+                      onClick={copiarCodigo}
+                      className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 text-sm ${
+                        copiado ? "bg-green-600 text-white" : "bg-blue-600 hover:bg-blue-500 text-white"
+                      }`}
+                    >
+                      {copiado ? "✓ CÓDIGO COPIADO!" : "📋 COPIAR CÓDIGO PIX"}
+                    </button>
+                    
+                    {/* Animação de carregamento */}
+                    <div className="flex items-center justify-center gap-2 mt-4">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                        <span className="text-xs text-green-500 ml-2 animate-pulse">Aguardando pagamento...</span>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
