@@ -32,7 +32,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // 🔹 Busca stories na Meta
     const fields = "media_url,media_type,thumbnail_url,timestamp";
     const urlMeta = `https://graph.facebook.com/v18.0/${usuario.instagramBusinessId}/stories?fields=${fields}&access_token=${usuario.accessTokenMeta}`;
 
@@ -41,7 +40,6 @@ export async function POST(request: Request) {
 
     if (dadosMeta.error) {
       console.error("Erro Token:", dadosMeta.error);
-      // Se der erro de token, pode ser que expirou
       return NextResponse.json({ erro: "Token inválido ou expirado." }, { status: 401 });
     }
 
@@ -53,7 +51,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // 📁 Pasta para salvar mídias
     const uploadDir = path.join(process.cwd(), "public", "stories");
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -64,21 +61,16 @@ export async function POST(request: Request) {
     for (const item of dadosMeta.data) {
       const dataPostagem = new Date(item.timestamp);
 
-      // 🔥 O PULO DO GATO (ANTI-DUPLICAÇÃO) 🔥
-      // Verifica no banco se já existe uma mídia desse usuário com EXATAMENTE a mesma data de postagem
       const jaExiste = await prisma.midia.findFirst({
         where: {
             userId: userId,
-            dataPost: dataPostagem // Compara a data original do Instagram
+            dataPost: dataPostagem 
         }
       });
 
-      // Se já existe, pula para o próximo sem baixar nem salvar nada
       if (jaExiste) {
         continue;
       }
-
-      // --- SE CHEGOU AQUI, É UM STORY NOVO ---
 
       const mediaResponse = await fetch(item.media_url);
       const buffer = Buffer.from(await mediaResponse.arrayBuffer());
@@ -89,20 +81,22 @@ export async function POST(request: Request) {
       const filePath = path.join(uploadDir, fileName);
       fs.writeFileSync(filePath, buffer);
 
+      // ESTRATÉGIA PORTO SEGURO: Validade de 15 horas
       const expiresAt = new Date(
-        dataPostagem.getTime() + 24 * 60 * 60 * 1000
+        dataPostagem.getTime() + 15 * 60 * 60 * 1000
       );
 
       await prisma.midia.create({
         data: {
           url: `/stories/${fileName}`,
           tipo: item.media_type === "VIDEO" ? "VIDEO" : "IMAGE",
-          duracao: item.media_type === "VIDEO" ? 15 : 10,
+          // ESTRATÉGIA PORTO SEGURO: 10s para vídeo, 5s para foto
+          duracao: item.media_type === "VIDEO" ? 10 : 5,
           autor: usuario.instagramUser || "Vibz TV",
           avatar: usuario.logoUrl || "https://i.pravatar.cc/150",
           userId: userId,
           status: "APPROVED",
-          dataPost: dataPostagem, // Salva a data original para conferir depois
+          dataPost: dataPostagem,
           expiresAt
         }
       });

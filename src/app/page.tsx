@@ -270,7 +270,6 @@ export default function Home() {
                 </button>
             </div>
 
-            {/* --- CARD DE STATUS CORRIGIDO --- */}
             <div className={`p-8 rounded-3xl border backdrop-blur-xl flex flex-col justify-between ${isAtivo ? 'bg-green-900/10 border-green-500/30' : 'bg-red-900/10 border-red-500/30'}`}>
                 <div>
                   <h3 className="text-gray-400 text-xs font-bold uppercase tracking-widest">Status</h3>
@@ -278,14 +277,12 @@ export default function Home() {
                       <span className={`w-3 h-3 rounded-full ${isAtivo ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
                       <p className={`text-3xl font-bold ${isAtivo ? 'text-green-400' : 'text-red-400'}`}>{isAtivo ? "Ativo" : "Inativo"}</p>
                   </div>
-                  {/* AJUSTE: Exibe o nome do plano corretamente */}
                   <p className="text-white mt-4 font-bold">
                     {typeof usuario.plano === 'string' ? usuario.plano : (usuario.plano?.nome || "Padrão")}
                   </p>
                   <p className="text-xs text-gray-400">{diasRestantes} dias restantes</p>
                 </div>
 
-                {/* ADIÇÃO: Botão de Upgrade */}
                 <div className="mt-6">
                   <button 
                     onClick={() => router.push('/planos')}
