@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
-  // AQUI ESTÁ A CORREÇÃO: Forçamos o Prisma a aceitar o Linux da Hostinger
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-1.1.x", "rhel-openssl-1.0.x"]
 }
 
@@ -16,19 +15,19 @@ enum MidiaStatus {
 }
 
 model User {
-  id             String    @id @default(uuid())
-  nomeEmpresa    String
-  email          String    @unique
-  senha          String
-  role           String    @default("CLIENTE")
+  id              String    @id @default(uuid())
+  nomeEmpresa     String
+  email           String    @unique
+  senha           String
+  role            String    @default("CLIENTE")
   
-  statusConta    String    @default("PENDENTE")
+  statusConta     String    @default("PENDENTE")
   
   emailVerificado Boolean   @default(false)
   codigoVerifica  String?
 
   validadePlano   DateTime?
-  testeGratisUsado Boolean   @default(false)
+  testeGratisUsado Boolean  @default(false)
   
   instagramId         String?
   instagramUser       String?
@@ -39,10 +38,10 @@ model User {
   instagramBusinessId String?
   
   planoId           String?
-  plano             Plano?     @relation(fields: [planoId], references: [id])
+  plano             Plano?    @relation(fields: [planoId], references: [id])
   
   midias            Midia[]
-  createdAt         DateTime @default(now())
+  createdAt         DateTime  @default(now())
 }
 
 model Plano {
@@ -75,7 +74,7 @@ model Midia {
   avatar    String?
 
   dataPost  DateTime    @default(now())
-  expiresAt DateTime
+  expiresAt DateTime    // Campo essencial para o seu plano de 15h
 
   status    MidiaStatus @default(APPROVED)
 
