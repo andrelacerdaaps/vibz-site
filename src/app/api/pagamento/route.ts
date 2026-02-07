@@ -6,7 +6,8 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 const prisma = globalForPrisma.prisma || new PrismaClient();
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-const ACCESS_TOKEN = 'APP_USR-6789075736569699-121918-7dd4a34e8606a4eff23bc481afa73949-1571274236';
+// --- SUA CHAVE NOVA (MERCADO PAGO PRODUÇÃO) ---
+const ACCESS_TOKEN = 'APP_USR-8096434725609568-020320-426ea7fff1c567ab7d8c35336d6b93fd-1571274236';
 
 // --- 1. ROTA DE VERIFICAÇÃO (O Site chama isso a cada 3s) ---
 export async function GET(request: Request) {
