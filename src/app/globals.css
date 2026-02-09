@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 /* Definindo as cores diretamente para evitar erros de cálculo do navegador */
 :root {

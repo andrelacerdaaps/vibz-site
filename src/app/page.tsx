@@ -301,7 +301,7 @@ export default function Home() {
                       <p className="text-lg font-black text-blue-400">{diasRestantes} <span className="text-[10px] text-gray-400">DIAS</span></p>
                     </div>
                     <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                       <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${(diasRestantes/30)*100}%` }}></div>
+                        <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: `${(diasRestantes/30)*100}%` }}></div>
                     </div>
                   </div>
                 </div>
