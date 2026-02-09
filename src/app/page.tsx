@@ -185,8 +185,18 @@ export default function Home() {
     const diasRestantes = Math.ceil((dataValidade.getTime() - new Date().getTime()) / (86400000));
     const isAtivo = usuario.statusConta === "ATIVO" && diasRestantes >= 0;
 
-    // --- LÓGICA DE CORES PLATINA / DIAMANTE ---
-    const nomePlano = usuario.planoAtivo?.toUpperCase() || "PADRÃO";
+    // --- CORREÇÃO DO NOME DO PLANO (AQUI ESTÁ A MÁGICA) ---
+    // Se o planoAtivo for muito grande (UUID), usamos 'PLANO VIBZ' ou o nome real se existir
+    let nomeRealPlano = usuario.plano || usuario.planoAtivo || "GRATUITO";
+    
+    // Se for um UUID gigante (mais de 20 caracteres), forçamos um nome amigável
+    if (nomeRealPlano.length > 25) { 
+        nomeRealPlano = "PLANO VIBZ"; 
+    }
+    
+    const nomePlano = nomeRealPlano.toUpperCase();
+
+    // Lógica visual baseada no nome corrigido
     const isDiamante = nomePlano.includes("DIAMANTE") || nomePlano.includes("GOLD");
     const isPlatina = nomePlano.includes("PLATINA") || nomePlano.includes("PRATA");
 
@@ -290,7 +300,7 @@ export default function Home() {
                   <div className="flex items-center gap-3 mt-2">
                       <span className={`w-3 h-3 rounded-full ${isAtivo ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
                       <p className={`text-3xl font-black tracking-tighter ${isAtivo ? 'text-white' : 'text-red-400'}`}>
-                        {usuario.planoAtivo || "PADRÃO"}
+                        {nomePlano}
                       </p>
                   </div>
                   

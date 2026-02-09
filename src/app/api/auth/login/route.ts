@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // Agora importamos daquele arquivo seguro
+import { prisma } from "@/lib/prisma"; 
 import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const data = await request.json();
     const { email, senha } = data;
 
-    // Busca o usuário no banco
+    // Busca o usuário no banco e Traz os dados do Plano junto
     const usuario = await prisma.user.findUnique({
       where: { email },
       include: { plano: true } 
@@ -41,6 +41,11 @@ export async function POST(request: Request) {
         }
     }
 
+    // --- CORREÇÃO AQUI ---
+    // Definimos qual nome vai aparecer. Se o banco trouxe os dados do plano (relação), usamos o nome oficial.
+    // Se não, usamos o campo texto antigo ou "GRATUITO".
+    const nomePlanoExibicao = usuario.plano?.nome || usuario.planoAtivo || "GRATUITO";
+
     return NextResponse.json({ 
       sucesso: true, 
       usuario: { 
@@ -49,14 +54,13 @@ export async function POST(request: Request) {
         email: usuario.email,
         statusConta: statusAtual,
         role: usuario.role,
-        plano: usuario.plano ? usuario.plano.nome : null,
-        planoAtivo: usuario.planoAtivo, // Adicionei para garantir que o front receba
+        // Aqui garantimos que o front receba o NOME, e não o ID
+        planoAtivo: nomePlanoExibicao, 
         validade: usuario.validadePlano 
       } 
     });
 
   } catch (error) {
-    // Esse console.error vai mostrar o erro real nos logs da Hostinger
     console.error("ERRO CRÍTICO NO LOGIN:", error);
     return NextResponse.json({ erro: "Erro interno no servidor." }, { status: 500 });
   }

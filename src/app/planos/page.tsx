@@ -21,11 +21,22 @@ export default function Planos() {
 
     async function carregarPlanos() {
       try {
-        const res = await fetch("/api/admin/users");
+        // Tenta buscar na rota pública de planos primeiro, se falhar tenta na admin
+        let res = await fetch("/api/planos"); // Rota ideal
+        if (!res.ok) {
+             res = await fetch("/api/admin/users"); // Rota alternativa (conforme seu código original)
+        }
+        
         const dados = await res.json();
-        if (dados.planos) setPlanos(dados.planos);
+        
+        // Ajuste para pegar a lista independente do formato da resposta (array direto ou objeto com chave planos)
+        if (Array.isArray(dados)) {
+            setPlanos(dados);
+        } else if (dados.planos) {
+            setPlanos(dados.planos);
+        }
       } catch (e) {
-        console.error("Erro ao carregar planos");
+        console.error("Erro ao carregar planos", e);
       }
     }
     carregarPlanos();
@@ -52,13 +63,14 @@ export default function Planos() {
           setStatusPagamento("APROVADO");
           pararVerificacao();
           
-          // --- AJUSTE: Atualiza local storage com o planoAtivo ---
+          // --- ATUALIZA O LOCALSTORAGE COM O NOME CORRETO ---
           const novoUsuario = { 
             ...usuario, 
-            planoAtivo: planoSelecionado?.nome, 
+            planoAtivo: planoSelecionado?.nome, // Salva o NOME, não o ID
             statusConta: "ATIVO" 
           };
           localStorage.setItem("usuarioVibz", JSON.stringify(novoUsuario));
+          setUsuario(novoUsuario); // Atualiza o estado local também
           
           setTimeout(() => {
               alert("✅ Pagamento Aprovado! Bem-vindo ao time.");
@@ -126,7 +138,7 @@ export default function Planos() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans py-20 px-4">
-      {/* --- MODAL DE PAGAMENTO (Mantendo sua estrutura original) --- */}
+      {/* --- MODAL DE PAGAMENTO --- */}
       {pixData && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
           <div className="bg-[#1a1a1a] w-full max-w-[320px] rounded-3xl overflow-hidden shadow-2xl border border-gray-800 flex flex-col items-center">
@@ -189,8 +201,8 @@ export default function Planos() {
                   </div>
                ) : (
                   <div className="w-full py-3 rounded-xl border border-gray-700 bg-gray-800/30 text-gray-400 font-bold text-center text-xs flex items-center justify-center gap-2">
-                     <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
-                     Aguardando confirmação do banco...
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-bounce"></div>
+                      Aguardando confirmação do banco...
                   </div>
                )}
             </div>
@@ -207,7 +219,7 @@ export default function Planos() {
             Escolha o nível da sua Vibz TV
         </p>
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push("/")}
           className="text-gray-500 hover:text-white text-sm transition-colors"
         >
           ← Voltar ao Painel
@@ -220,10 +232,12 @@ export default function Planos() {
         )}
 
         {planos.map((plano) => {
-          // --- LÓGICA DE CORES PLATINA / DIAMANTE ---
+          // --- CORREÇÃO AQUI: Comparação Robusta ---
+          // Verifica se o planoAtivo do usuário é igual ao ID do plano OU ao NOME do plano
+          const isAtual = (usuario?.planoAtivo === plano.id) || (usuario?.planoAtivo === plano.nome);
+
           const isDiamante = plano.liberaVideo && plano.liberaLayout;
           const isPlatina = plano.liberaVideo && !plano.liberaLayout;
-          const isAtual = usuario?.planoAtivo === plano.nome;
 
           const estiloCard = isDiamante 
             ? "border-yellow-500 shadow-[0_0_25px_rgba(234,179,8,0.2)] bg-gradient-to-b from-yellow-900/10 to-black" 
@@ -236,11 +250,11 @@ export default function Planos() {
           return (
             <div
               key={plano.id}
-              className={`group relative p-8 rounded-3xl border transition-all duration-500 flex flex-col ${estiloCard} ${isAtual ? 'scale-105 border-green-500' : ''}`}
+              className={`group relative p-8 rounded-3xl border transition-all duration-500 flex flex-col ${estiloCard} ${isAtual ? 'scale-105 border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.3)]' : ''}`}
             >
               {isAtual && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-black text-[10px] font-black px-4 py-1 rounded-full shadow-lg">
-                  PLANO ATIVO
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-black text-[10px] font-black px-4 py-1 rounded-full shadow-lg z-10">
+                  PLANO ATUAL
                 </div>
               )}
               
@@ -274,7 +288,7 @@ export default function Planos() {
                 disabled={loadingId === plano.id || isAtual}
                 className={`w-full py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${
                   isAtual
-                    ? "bg-green-500/10 text-green-500 border border-green-500/20 cursor-default"
+                    ? "bg-green-500/10 text-green-500 border border-green-500/20 cursor-default opacity-100" // Opacity 100 para garantir visibilidade
                     : isDiamante
                     ? "bg-yellow-500 text-black hover:bg-yellow-400"
                     : isPlatina
@@ -282,7 +296,7 @@ export default function Planos() {
                     : "bg-white text-black hover:bg-gray-200"
                 }`}
               >
-                {loadingId === plano.id ? "⏳ Aguarde..." : isAtual ? "✓ Seu Plano" : "Ativar Agora"}
+                {loadingId === plano.id ? "⏳ Aguarde..." : isAtual ? "✓ SEU PLANO" : "ATIVAR AGORA"}
               </button>
             </div>
           );
