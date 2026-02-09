@@ -1,6 +1,7 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-1.1.x", "rhel-openssl-1.0.x"]
+  // Adicionei "debian-openssl-3.0.x" e "linux-musl" que são padrões novos de hospedagem
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "linux-musl", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
@@ -37,7 +38,6 @@ model User {
   accessTokenMeta     String?   @db.Text
   instagramBusinessId String?
   
-  // --- CAMPO CORRIGIDO AQUI ---
   planoAtivo        String?   @default("Gratuito")
   
   planoId           String?
