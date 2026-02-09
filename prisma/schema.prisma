@@ -1,17 +1,15 @@
 generator client {
   provider      = "prisma-client-js"
-  // Adicionei os alvos de compilação para garantir que rode no Linux da Hostinger
   binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x", "linux-musl", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
   provider = "mysql"
-  // --- AQUI ESTÁ A MUDANÇA PARA TESTE ---
-  // Em vez de ler do ambiente (env), coloquei o link direto que você me mandou.
-  // IMPORTANTE: Depois do teste, volte para env("DATABASE_URL") por segurança.
-  url      = "mysql://u757616691_admin:Vibz2026Mudei@localhost:3306/u757616691_vibz"
+  // VOLTAMOS PARA O MODO SEGURO: Ele vai ler o que você colocar no painel da Hostinger
+  url      = env("DATABASE_URL")
 }
 
+// ... (O resto do arquivo continua igual, não precisa mexer para baixo)
 enum MidiaStatus {
   APPROVED
   PENDING
