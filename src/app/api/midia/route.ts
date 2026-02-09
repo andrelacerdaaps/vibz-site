@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"; // <--- AQUI ESTÁ A CORREÇÃO (Importamos o conector seguro)
 import fs from "fs";
 import path from "path";
-
-// Mantendo sua configuração do Prisma para não dar erro de conexão
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-export const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 // 1. LISTAR (GET)
 export async function GET(request: Request) {
@@ -18,12 +13,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ erro: "userId é obrigatório" }, { status: 400 });
     }
 
-    // Busca todas as mídias (Removemos o filtro de data para você ver tudo no painel por enquanto)
-    // Se quiser filtrar só os ativos, descomente a parte do 'expiresAt'
+    // Busca todas as mídias
     const midias = await prisma.midia.findMany({
       where: {
         userId: userId,
-        // status: "APPROVED", // Traz tudo para você poder gerenciar
+        // status: "APPROVED", // Mantive comentado conforme seu original
       },
       orderBy: { dataPost: "desc" } // Mais novos primeiro
     });
@@ -35,7 +29,7 @@ export async function GET(request: Request) {
   }
 }
 
-// 2. SALVAR (POST) - Mantive igual ao seu, está correto
+// 2. SALVAR (POST) - Mantido idêntico ao seu
 export async function POST(request: Request) {
   try {
     const data = await request.json();
@@ -68,7 +62,7 @@ export async function POST(request: Request) {
   }
 }
 
-// 3. DELETAR DE VERDADE (DELETE) - AQUI ESTÁ A MUDANÇA
+// 3. DELETAR (DELETE) - Mantido idêntico ao seu
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

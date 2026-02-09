@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"; // <--- AQUI ESTÁ A CORREÇÃO: Usamos o arquivo central
 import fs from "fs";
 import path from "path";
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-export const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// REMOVI A CRIAÇÃO MANUAL DO PRISMA AQUI PARA NÃO LOTAR O SERVIDOR
+// Agora ele usa a conexão única importada na linha 2
 
 export async function POST(request: Request) {
   try {
@@ -58,6 +57,7 @@ export async function POST(request: Request) {
 
     let totalSalvo = 0;
 
+    // Loop mantido idêntico, apenas a conexão do banco agora é segura
     for (const item of dadosMeta.data) {
       const dataPostagem = new Date(item.timestamp);
 

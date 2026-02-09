@@ -1,19 +1,14 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma"; // <--- A CORREÇÃO: Usamos a conexão segura central
 
-// Evita múltiplas instâncias do Prisma no Next.js (Hot Reload)
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
-// --- SUA CHAVE NOVA (MERCADO PAGO PRODUÇÃO) ---
+// --- SUA CHAVE (MANTIDA) ---
 const ACCESS_TOKEN = 'APP_USR-8096434725609568-020320-426ea7fff1c567ab7d8c35336d6b93fd-1571274236';
 
-// --- 1. ROTA DE VERIFICAÇÃO (O Site chama isso a cada 3s) ---
+// --- 1. ROTA DE VERIFICAÇÃO (GET) ---
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
-        const id = searchParams.get('id'); // Este é o ID da transação do Mercado Pago
+        const id = searchParams.get('id'); // ID da transação do Mercado Pago
 
         if (!id) return NextResponse.json({ erro: "ID faltando" }, { status: 400 });
 
@@ -28,8 +23,7 @@ export async function GET(request: Request) {
             const userId = data.metadata?.user_id;
             const planoId = data.metadata?.plano_id;
 
-            // --- NOVO: ATUALIZA O STATUS NA TABELA PAGAMENTO ---
-            // Isso garante que você tenha o histórico aprovado no banco
+            // Atualiza o status na tabela de pagamentos para aprovado
             await prisma.pagamento.updateMany({
                 where: { idTransacaoMP: String(id) },
                 data: { status: 'approved' }
@@ -43,7 +37,7 @@ export async function GET(request: Request) {
                     where: { id: userId },
                     data: { 
                         statusConta: 'ATIVO', 
-                        planoAtivo: planoId || 'VIBZ PRO', // Usando o campo de texto que criamos
+                        planoAtivo: planoId || 'VIBZ PRO', 
                         validadePlano: dataValidade 
                     }
                 });
@@ -52,6 +46,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({ status: data.status });
     } catch (error) {
+        console.error("ERRO GET PAGAMENTO:", error);
         return NextResponse.json({ erro: "Erro API" }, { status: 500 });
     }
 }
@@ -106,11 +101,11 @@ export async function POST(request: Request) {
     const dataMP = await response.json();
 
     if (!response.ok) {
+      console.error("Erro MP:", dataMP);
       return NextResponse.json({ erro: "Erro Mercado Pago" }, { status: 400 });
     }
 
-    // --- NOVO: SALVA A TENTATIVA NA TABELA PAGAMENTO ---
-    // Cria o registro como 'pending' assim que o QR Code aparece
+    // Salva a tentativa como 'pending'
     await prisma.pagamento.create({
       data: {
         idTransacaoMP: String(dataMP.id),
@@ -128,6 +123,7 @@ export async function POST(request: Request) {
     });
 
   } catch (error) {
+    console.error("ERRO POST PAGAMENTO:", error);
     return NextResponse.json({ erro: "Erro interno" }, { status: 500 });
   }
 }
