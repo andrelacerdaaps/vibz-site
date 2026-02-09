@@ -60,8 +60,5 @@ export async function POST(request: Request) {
       } 
     });
 
-  } catch (error) {
-    console.error("ERRO CRÍTICO NO LOGIN:", error);
-    return NextResponse.json({ erro: "Erro interno no servidor." }, { status: 500 });
-  }
+  } 
 }
